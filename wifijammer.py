@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-
 import os
 import sys
 import subprocess
 import time
 import webbrowser
-
 RED = '\033[91m'
 GREEN = '\033[92m'
 YELLOW = '\033[93m'
 END = '\033[0m'
-
 def intro():
     print(f"""{RED}
          __          _______ ______ _____        _         __  __ __  __ ______ _____  "
@@ -60,20 +57,16 @@ def intro():
             =========================== Press ctrl + c to exit =============================         
 
     {END}""")
-
 wireless_interface = None
 wireless_interface_mon = None
 bssid=None
 channel=None
-
 def check_root():
     if not os.geteuid() == 0 :
         print(f"{RED}Run it as root{END}")
         sys.exit(1) 
 def clear() :
-
     subprocess.check_call(['clear'])
-
 def necessary_pkg():
 
     try:
@@ -84,21 +77,18 @@ def necessary_pkg():
     except:
         print(f"{RED}Error installing aircrack-ng try to install manually ...{END}")
         sys.exit(1)
-
 def revert_managed_mode():
 
     print(f"{GREEN}Reverting to managed mode...{END}")
     subprocess.check_call(['airmon-ng','stop',wireless_interface_mon],stdout=subprocess.PIPE,text=True)
     time.sleep(1)
     clear()
-
 def try_again_from_start():
 
     interface_name()
     wifi_dump()
     specific_dump()
     type_of_attack()
-
 def interface_name():
 
     intro()
@@ -127,7 +117,6 @@ def interface_name():
     time.sleep(1)
     wireless_interface_mon = input(f"{RED}Enter Your new wifi card interface name : {END}").strip()
     clear()
-
 def wifi_dump():
     intro()
     print(f"{YELLOW}Dumping the wifi traffic Press ctrl + c to stop... !!{END}")
@@ -150,7 +139,6 @@ def wifi_dump():
                 break
     finally:
         pass
-
 def try_again():
         clear()
         intro()
@@ -160,13 +148,11 @@ def try_again():
             start_again()
         else :
             pass
-
 def start_again():
 
     wifi_dump()
     specific_dump()
     type_of_attack()
-
 def specific_dump() :
 
     global bssid,channel
@@ -187,9 +173,6 @@ def specific_dump() :
                 break
     finally:
         pass
-
-
-
 def type_of_attack():
  
      print(f"{GREEN}Enter the attack type: (1, 2, or 3){END}")
@@ -222,8 +205,6 @@ def type_of_attack():
      finally:
             
             try_again()
-
-
 check_root()
 intro()
 necessary_pkg()
