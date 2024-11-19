@@ -82,7 +82,7 @@ class jammer():
         except:
             print(f"{RED}Error installing aircrack-ng try to install manually ...{END}")
             sys.exit(1) 
-            #self.clear =    #clears the termina
+    
     def clear(self):
         subprocess.check_call(['clear'])
     
@@ -145,6 +145,7 @@ class jammer():
                     break
         finally:
             pass
+
     def try_again(self):
         self.clear()
         
@@ -154,6 +155,7 @@ class jammer():
             self.start_again()
         else :
             pass
+
     def start_again(self):
 
         self.wifi_dump()
@@ -178,6 +180,7 @@ class jammer():
                     break
         finally:
             pass
+
     def type_of_attack(self):
  
         print(f"{GREEN}Enter the attack type: (1, 2, or 3){END}")
@@ -201,14 +204,12 @@ class jammer():
                         else:
                             sys.exit(0)
                         
-                        
         except KeyboardInterrupt:
                 print(f"{RED}\nStopping the deauthentication...{END}")
                 time.sleep(1)
                 process.terminate()  # Terminate the process
                 process.wait()  # Wait for it to terminate
         finally:
-                
                 self.try_again()
 
 
