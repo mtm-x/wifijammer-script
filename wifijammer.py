@@ -76,7 +76,7 @@ class jammer():
             cont = input("")
             if cont == "":
                 airmon = subprocess.run(["which","airmon-ng"],stdout=subprocess.PIPE, text=True)
-                if not airmon:
+                if "not found" in airmon:
                     print("Installing required packages...")
                     time.sleep(1)
                     distro = subprocess.run(['uname','-r'],stdout=subprocess.PIPE,text=True).stdout.strip().lower()
