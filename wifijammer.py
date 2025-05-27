@@ -20,7 +20,6 @@ YELLOW = '\033[93m'
 END = '\033[0m'
 
 class jammer():
-
     def __init__(self):
         print(rf"""{RED}
          __          _______ ______ _____        _         __  __ __  __ ______ _____  "
@@ -76,7 +75,7 @@ class jammer():
             cont = input("")
             if cont == "":
                 airmon = subprocess.run(["which","airmon-ng"],stdout=subprocess.PIPE, text=True)
-                if "not found" in airmon:
+                if airmon.returncode != 0:
                     print("Installing required packages...")
                     time.sleep(1)
                     distro = subprocess.run(['uname','-r'],stdout=subprocess.PIPE,text=True).stdout.strip().lower()
@@ -88,15 +87,15 @@ class jammer():
                         subprocess.run(['sudo', 'pacman', '-S', 'aircrack-ng','--noconfirm'], check=True)
                     else:
                         print("Please install aircrack-ng manually.")
-        except:
-            print(f"{RED}Error installing aircrack-ng try to install manually ...{END}")
+        except Exception as e:
+            print(e)
+            print(f"{RED}Error installing aircrack-ng try to install manually ...{END}\n Error : {e}")
             sys.exit(1) 
     
     def clear(self):
         subprocess.check_call(['clear'])
     
     def revert_managed_mode(self):
-
         print(f"{GREEN}Reverting to managed mode...{END}")
         subprocess.check_call(['airmon-ng','stop',self.wireless_interface_mon],stdout=subprocess.PIPE,text=True)
         time.sleep(1)
@@ -105,7 +104,6 @@ class jammer():
         self.clear()
         
     def try_again_from_start(self):
-
         self.interface_name()
         self.wifi_dump()
         self.type_of_attack()
@@ -113,8 +111,6 @@ class jammer():
     def interface_name(self):
         try:
             result = subprocess.run(['iwconfig'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            # Process the output to get the interface names
-            # self.interface_names = []
             self.wireless_interface_mon = None
             for line in result.stdout.splitlines():
                 if 'IEEE 802.11' in line:
